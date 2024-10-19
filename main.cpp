@@ -119,6 +119,10 @@ public:
     {
         return this->value;
     }
+    void addValue(double value)
+    {
+        this->value += value;
+    }
 
     friend ostream& operator<<(ostream& stream, Percentage& percentage)
     {
@@ -274,6 +278,55 @@ public:
         return 0.0;
     }
 
+    void changePercentage()
+    {
+        cout << "Выберите счёт:\n";
+        for (int i = 0; i < loans.size(); i++)
+        {
+            cout << i+1 << ") " << loans[i] << " with " << percentages[i] << " percentage" << "\n";
+        }
+        int loanIndex; cin >> loanIndex;
+        --loanIndex;
+        if (loanIndex >= loans.size() || loanIndex < 0)
+        {
+            cout << "Такого счёта нет\n";
+            return;
+        }
+        cout << "На сколько увеличить процент?\n";
+        double diff; cin >> diff;
+        percentages[loanIndex].addValue(diff);
+        cout << "Процент успешно изменён\n";
+    }
+    void changeDepositPercentage(double value)
+    {
+        for (int i = 0; i < loans.size(); i++)
+        {
+            if (loans[i].getAmmount() >= 0)
+            {
+                percentages[i].addValue(value);
+            }
+        }
+    }
+    void changeCreditPercentage(double value)
+    {
+        for (int i = 0; i < loans.size(); i++)
+        {
+            if (loans[i].getAmmount() < 0)
+            {
+                percentages[i].addValue(value);
+            }
+        }
+    }
+
+    void payDay()
+    {
+        for (int i = 0; i < loans.size(); i++)
+        {
+            loans[i].divAmmount(100.0);
+            loans[i].mulAmmount(percentages[i].getValue()+100.0);
+        }
+    }
+
     friend ostream& operator<<(ostream& stream, const Client& client)
     {
         stream << client.name << "\n";
@@ -386,6 +439,113 @@ public:
         }
         clients.push_back(Client(name));
         return clients[clients.size()-1].takeLoan();
+    }
+
+    void changePercentage()
+    {
+        int groupSwitch;
+        cout << "1) изменить ставку одному клиенту\n";
+        cout << "2) изменить ставки по вкладам\n";
+        cout << "3) изменить ставки по кредитам\n";
+        cout << "4) изменить все ставки \n";
+        cout << "Выберите категорию: ";
+        cin >> groupSwitch;
+        string name;
+        vector< string > names;
+        double diff;
+        switch (groupSwitch)
+        {
+        case 1:
+        {
+            cout << "Введите имя клиента: ";
+            cin >> name;
+            for (const auto client : clients)
+            {
+                names.push_back(client.getName());
+            }
+            for (int i = 0; i < clients.size(); i++)
+            {
+                if (clients[i].getName() == name)
+                {
+                    clients[i].changePercentage();
+                }
+            }
+            cout << "Проценты изменены\n";
+            break;
+        }  
+        case 2:
+        {
+            cout << "На сколько увеличить проценты по вкладам?\n";
+            cin >> diff;
+            for (int i = 0; i < clients.size(); i++)
+            {
+                clients[i].changeDepositPercentage(diff);
+            }
+            cout << "Проценты изменены\n";
+            break;
+        }
+        case 3:
+        {
+            cout << "На сколько увеличить проценты по кредитам?\n";
+            cin >> diff;
+            for (int i = 0; i < clients.size(); i++)
+            {
+                clients[i].changeCreditPercentage(diff);
+            }
+            cout << "Проценты изменены\n";
+            break;
+        }
+        case 4:
+        {
+            cout << "На сколько увеличить проценты?\n";
+            cin >> diff;
+            for (int i = 0; i < clients.size(); i++)
+            {
+                clients[i].changeCreditPercentage(diff);
+                clients[i].changeDepositPercentage(diff);
+            }
+            cout << "Проценты изменены\n";
+            break;
+        }
+        default:
+        {
+            cout << "Такой категории нет\n";
+            break;
+        }
+        }
+    }
+
+    void payDay()
+    {
+        for (int i = 0; i < clients.size(); i++)
+        {
+            clients[i].payDay();
+        }
+    }
+
+    void meanCreditDeposit()
+    {
+        double depositSum = 0; double depositCounter = 0;
+        double creditSum = 0; double creditCounter = 0;
+        for (const auto client : clients)
+        {
+            vector< Loan > loans = client.getLoans();
+            for (auto loan : loans)
+            {
+                if (loan.getAmmount() < 0.0)
+                {
+                    creditSum -= loan.getAmmount();
+                    creditCounter += 1;
+                }
+                else
+                {
+                    depositSum += loan.getAmmount();
+                    depositCounter += 1;
+                }
+            }
+        }
+        cout << "Средняя сумма кредитов: " << creditSum / creditCounter << "\n";
+        cout << "Средняя сумма вкладов: " << depositSum / depositCounter << "\n";
     }
 
     void write_csv(const char* filename)
@@ -630,16 +790,20 @@ int main()
             break;
         }
         case 6:{
+            db.changePercentage();
+            getchar();
             cout << "Нажмите любую кнопку для продолжения";
             getchar();
             break;
         }
         case 7:{
+            db.payDay();
             cout << "Нажмите любую кнопку для продолжения";
             getchar();
             break;
         }
         case 8:{
+            db.meanCreditDeposit();
             cout << "Нажмите любую кнопку для продолжения";
             getchar();
             break;
