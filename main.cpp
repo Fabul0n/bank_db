@@ -10,6 +10,7 @@
 #include <functional>
 #include <fstream>
 #include <random>
+#include <shared_mutex>
 
 
 using namespace std;
@@ -344,6 +345,8 @@ class Table
 {
     vector< Client > clients;
     string name;
+    shared_mutex mtx;
+    inline static mutex stream_mtx;
 public:
     Table() = default;
     Table(vector< Client > clients, string name)
@@ -360,262 +363,277 @@ public:
 
     vector< Client > getClients()
     {
-        return this->clients;
+        shared_lock<shared_mutex> sl(mtx);
+            return this->clients;
     }
 
     double withdraw()
     {
-        vector< string > names;
-        for (const auto client : clients)
-        {
-            names.push_back(client.getName());
-        }
-        cout << "Введите ваше имя: ";
-        string name; cin >> name;
-        for (int i = 0; i < clients.size(); i++)
-        {
-            if (clients[i].getName() == name)
-            {
-                return clients[i].withdraw();
-            }
-        }
-        cout << "Такого клиента нет\n";
-        return 0;
-    }
-    void makeDeposit()
-    {
-        vector< string > names;
-        for (const auto client : clients)
-        {
-            names.push_back(client.getName());
-        }
-        cout << "Введите ваше имя: ";
-        string name; cin >> name;
-        for (int i = 0; i < clients.size(); i++)
-        {
-            if (clients[i].getName() == name)
-            {
-                clients[i].makeDeposit();
-                return;
-            }
-        }
-        clients.push_back(Client(name));
-        clients[clients.size()-1].makeDeposit();
-    }
-    void payOffCredit()
-    {
-        vector< string > names;
-        for (const auto client : clients)
-        {
-            names.push_back(client.getName());
-        }
-        cout << "Введите ваше имя: ";
-        string name; cin >> name;
-        for (int i = 0; i < clients.size(); i++)
-        {
-            if (clients[i].getName() == name)
-            {
-                clients[i].payOffCredit();
-                return;
-            }
-        }
-        cout << "Такого клиента нет\n";
-    }
-    double takeLoan()
-    {
-        vector< string > names;
-        for (const auto client : clients)
-        {
-            names.push_back(client.getName());
-        }
-        cout << "Введите ваше имя: ";
-        string name; cin >> name;
-        for (int i = 0; i < clients.size(); i++)
-        {
-            if (clients[i].getName() == name)
-            {
-                return clients[i].takeLoan();
-            }
-        }
-        clients.push_back(Client(name));
-        return clients[clients.size()-1].takeLoan();
-    }
-
-    void changePercentage()
-    {
-        int groupSwitch;
-        cout << "1) изменить ставку одному клиенту\n";
-        cout << "2) изменить ставки по вкладам\n";
-        cout << "3) изменить ставки по кредитам\n";
-        cout << "4) изменить все ставки \n";
-        cout << "Выберите категорию: ";
-        cin >> groupSwitch;
-        string name;
-        vector< string > names;
-        double diff;
-        switch (groupSwitch)
-        {
-        case 1:
-        {
-            cout << "Введите имя клиента: ";
-            cin >> name;
+        unique_lock<shared_mutex> ul(mtx);
+            vector< string > names;
             for (const auto client : clients)
             {
                 names.push_back(client.getName());
             }
+            cout << "Введите ваше имя: ";
+            string name; cin >> name;
             for (int i = 0; i < clients.size(); i++)
             {
                 if (clients[i].getName() == name)
                 {
-                    clients[i].changePercentage();
+                    return clients[i].withdraw();
                 }
             }
-            cout << "Проценты изменены\n";
-            break;
-        }  
-        case 2:
-        {
-            cout << "На сколько увеличить проценты по вкладам?\n";
-            cin >> diff;
+            cout << "Такого клиента нет\n";
+            return 0;
+    }
+    void makeDeposit()
+    {
+        unique_lock<shared_mutex> ul(mtx);
+            vector< string > names;
+            for (const auto client : clients)
+            {
+                names.push_back(client.getName());
+            }
+            cout << "Введите ваше имя: ";
+            string name; cin >> name;
             for (int i = 0; i < clients.size(); i++)
             {
-                clients[i].changeDepositPercentage(diff);
+                if (clients[i].getName() == name)
+                {
+                    clients[i].makeDeposit();
+                    return;
+                }
             }
-            cout << "Проценты изменены\n";
-            break;
-        }
-        case 3:
-        {
-            cout << "На сколько увеличить проценты по кредитам?\n";
-            cin >> diff;
+            clients.push_back(Client(name));
+            clients[clients.size()-1].makeDeposit();
+    }
+    void payOffCredit()
+    {
+        unique_lock<shared_mutex> ul(mtx);
+            vector< string > names;
+            for (const auto client : clients)
+            {
+                names.push_back(client.getName());
+            }
+            cout << "Введите ваше имя: ";
+            string name; cin >> name;
             for (int i = 0; i < clients.size(); i++)
             {
-                clients[i].changeCreditPercentage(diff);
+                if (clients[i].getName() == name)
+                {
+                    clients[i].payOffCredit();
+                    return;
+                }
             }
-            cout << "Проценты изменены\n";
-            break;
-        }
-        case 4:
-        {
-            cout << "На сколько увеличить проценты?\n";
-            cin >> diff;
+            cout << "Такого клиента нет\n";
+    }
+    double takeLoan()
+    {
+        unique_lock<shared_mutex> ul(mtx);
+            vector< string > names;
+            for (const auto client : clients)
+            {
+                names.push_back(client.getName());
+            }
+            cout << "Введите ваше имя: ";
+            string name; cin >> name;
             for (int i = 0; i < clients.size(); i++)
             {
-                clients[i].changeCreditPercentage(diff);
-                clients[i].changeDepositPercentage(diff);
+                if (clients[i].getName() == name)
+                {
+                    return clients[i].takeLoan();
+                }
             }
-            cout << "Проценты изменены\n";
-            break;
-        }
-        default:
-        {
-            cout << "Такой категории нет\n";
-            break;
-        }
-        }
+            clients.push_back(Client(name));
+            return clients[clients.size()-1].takeLoan();
+    }
+
+    void changePercentage()
+    {
+        unique_lock<shared_mutex> ul(mtx);
+            int groupSwitch;
+            cout << "1) изменить ставку одному клиенту\n";
+            cout << "2) изменить ставки по вкладам\n";
+            cout << "3) изменить ставки по кредитам\n";
+            cout << "4) изменить все ставки \n";
+            cout << "Выберите категорию: ";
+            cin >> groupSwitch;
+            string name;
+            vector< string > names;
+            double diff;
+            switch (groupSwitch)
+            {
+            case 1:
+            {
+                cout << "Введите имя клиента: ";
+                cin >> name;
+                for (const auto client : clients)
+                {
+                    names.push_back(client.getName());
+                }
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    if (clients[i].getName() == name)
+                    {
+                        clients[i].changePercentage();
+                    }
+                }
+                cout << "Проценты изменены\n";
+                break;
+            }  
+            case 2:
+            {
+                cout << "На сколько увеличить проценты по вкладам?\n";
+                cin >> diff;
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    clients[i].changeDepositPercentage(diff);
+                }
+                cout << "Проценты изменены\n";
+                break;
+            }
+            case 3:
+            {
+                cout << "На сколько увеличить проценты по кредитам?\n";
+                cin >> diff;
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    clients[i].changeCreditPercentage(diff);
+                }
+                cout << "Проценты изменены\n";
+                break;
+            }
+            case 4:
+            {
+                cout << "На сколько увеличить проценты?\n";
+                cin >> diff;
+                for (int i = 0; i < clients.size(); i++)
+                {
+                    clients[i].changeCreditPercentage(diff);
+                    clients[i].changeDepositPercentage(diff);
+                }
+                cout << "Проценты изменены\n";
+                break;
+            }
+            default:
+            {
+                cout << "Такой категории нет\n";
+                break;
+            }
+            }
     }
 
     void payDay()
     {
-        for (int i = 0; i < clients.size(); i++)
-        {
-            clients[i].payDay();
-        }
+        unique_lock<shared_mutex> ul(mtx);
+            for (int i = 0; i < clients.size(); i++)
+            {
+                clients[i].payDay();
+            }
+            unique_lock<mutex> ul2(stream_mtx);
+                cout << "(Уведомление!) Начисление процентов прошло успешно\n";
     }
 
     void meanCreditDeposit()
     {
-        double depositSum = 0; double depositCounter = 0;
-        double creditSum = 0; double creditCounter = 0;
-        for (const auto client : clients)
-        {
-            vector< Loan > loans = client.getLoans();
-            for (auto loan : loans)
+        shared_lock<shared_mutex> sl(mtx);
+            double depositSum = 0; double depositCounter = 0;
+            double creditSum = 0; double creditCounter = 0;
+            for (const auto client : clients)
             {
-                if (loan.getAmmount() < 0.0)
+                vector< Loan > loans = client.getLoans();
+                for (auto loan : loans)
                 {
-                    creditSum -= loan.getAmmount();
-                    creditCounter += 1;
-                }
-                else
-                {
-                    depositSum += loan.getAmmount();
-                    depositCounter += 1;
+                    if (loan.getAmmount() < 0.0)
+                    {
+                        creditSum -= loan.getAmmount();
+                        creditCounter += 1;
+                    }
+                    else
+                    {
+                        depositSum += loan.getAmmount();
+                        depositCounter += 1;
+                    }
                 }
             }
-        }
-        cout << "Средняя сумма кредитов: " << creditSum / creditCounter << "\n";
-        cout << "Средняя сумма вкладов: " << depositSum / depositCounter << "\n";
+            unique_lock<mutex> ul(stream_mtx);
+                cout << "Средняя сумма кредитов: " << creditSum / creditCounter << "\n";
+                cout << "Средняя сумма вкладов: " << depositSum / depositCounter << "\n";
     }
 
     void write_csv(const char* filename)
     {
-        ofstream fout(filename);
-        if (!fout.is_open())
-        {
-            cout << "Не удалось открыть файл\n";
-            return;
-        }
-        for (const auto client : clients)
-        {
-            fout << client.getName();
-            vector< Loan > loans = client.getLoans();
-            vector< Percentage > percentages = client.getPercentages();
-            for (size_t i = 0; i < loans.size(); i++)
+        shared_lock<shared_mutex> sl(mtx);
+            ofstream fout(filename);
+            if (!fout.is_open())
             {
-                fout << ',' << loans[i] << ',' << percentages[i];;
+                cout << "Не удалось открыть файл\n";
+                return;
             }
-            fout << "\n";
-        }
-        cout << "Запись прошла успешно\n";
+            for (const auto client : clients)
+            {
+                fout << client.getName();
+                vector< Loan > loans = client.getLoans();
+                vector< Percentage > percentages = client.getPercentages();
+                for (size_t i = 0; i < loans.size(); i++)
+                {
+                    fout << ',' << loans[i] << ',' << percentages[i];;
+                }
+                fout << "\n";
+            }
+            unique_lock<mutex> ul(stream_mtx);
+                cout << "(Уведомление!) Запись в файл прошла успешно\n";
     }
     void read_csv(const char* filename, string table_name)
     {
-        ifstream fin(filename);
-        vector< Client > clients;
-        string row;
-        //int len = 0;
-        while (getline(fin, row))
-        {
-            vector< Loan > loans;
-            vector< Percentage > percentages;
-            string name;
-            stringstream ss(row);
-            string value;
-            int k = 1;
-            while(getline(ss, value, ','))
+        unique_lock<shared_mutex> ul(mtx);
+            ifstream fin(filename);
+            vector< Client > clients;
+            string row;
+            //int len = 0;
+            while (getline(fin, row))
             {
-                if (name.empty())
+                vector< Loan > loans;
+                vector< Percentage > percentages;
+                string name;
+                stringstream ss(row);
+                string value;
+                int k = 1;
+                while(getline(ss, value, ','))
                 {
-                    name = value;
-                }
-                else
-                {
-                    if (k % 2)
+                    if (name.empty())
                     {
-                        percentages.push_back(value);
+                        name = value;
                     }
                     else
                     {
-                        loans.push_back(value);
+                        if (k % 2)
+                        {
+                            percentages.push_back(value);
+                        }
+                        else
+                        {
+                            loans.push_back(value);
+                        }
                     }
+                    ++k;
                 }
-                ++k;
+                assert(((void)"Corrupted file", loans.size() == percentages.size()));
+                //assert(((void)"Corrupted file", len == 0 || len == res.size()));
+                //len = res.size();
+                clients.push_back(Client(name, loans, percentages));
             }
-            assert(((void)"Corrupted file", loans.size() == percentages.size()));
-            //assert(((void)"Corrupted file", len == 0 || len == res.size()));
-            //len = res.size();
-            clients.push_back(Client(name, loans, percentages));
-        }
-        this->clients = clients;
-        this->name = table_name;
+            this->clients = clients;
+            this->name = table_name;
     }
 
     Table& operator=(const Table& other)
     {
-        this->clients = other.clients;
-        this->name = other.name;
-        return *this;
+        unique_lock<shared_mutex> ul(mtx);
+            this->clients = other.clients;
+            this->name = other.name;
+            return *this;
     }
     friend ostream& operator<<(ostream& stream, const Table& table)
     {
@@ -645,28 +663,29 @@ public:
 
         string row_sep(accumulate(colWidths.begin(), colWidths.end(), 0)+max_len+1+max_len*8+1, '-');
 
-        if (table.name.size() >= row_sep.size())
-        {
-            stream << table << "\n\n";
-        }
-        else
-        {
-            int part = (row_sep.size() - table.name.size()) / 2;
-            stream << string(part, '=') << table.name << string(part+((row_sep.size() - table.name.size()) % 2), '=') << "\n";
-        }
-
-        stream << row_sep << "\n";
-        for (const auto client : table.clients)
-        {
-            stream << setw(1) << "|" << setw(colWidths[0]) << client.getName() << setw(1) << "|";
-            vector< Loan > loans = client.getLoans();
-            vector< Percentage > percentages = client.getPercentages();
-            for (size_t i = 0; i < loans.size(); i++)
+        unique_lock<mutex> ul(stream_mtx);
+            if (table.name.size() >= row_sep.size())
             {
-                stream << setw(colWidths[i+1]) << loans[i] << setw(1) << "|" << setw(6) << percentages[i] << setw(1) << '%' << setw(1) << "|" ;
+                stream << table << "\n\n";
             }
-            stream << "\n" << row_sep << "\n";
-        }
+            else
+            {
+                int part = (row_sep.size() - table.name.size()) / 2;
+                stream << string(part, '=') << table.name << string(part+((row_sep.size() - table.name.size()) % 2), '=') << "\n";
+            }
+
+            stream << row_sep << "\n";
+            for (const auto client : table.clients)
+            {
+                stream << setw(1) << "|" << setw(colWidths[0]) << client.getName() << setw(1) << "|";
+                vector< Loan > loans = client.getLoans();
+                vector< Percentage > percentages = client.getPercentages();
+                for (size_t i = 0; i < loans.size(); i++)
+                {
+                    stream << setw(colWidths[i+1]) << loans[i] << setw(1) << "|" << setw(6) << percentages[i] << setw(1) << '%' << setw(1) << "|" ;
+                }
+                stream << "\n" << row_sep << "\n";
+            }
         return stream;
     }
 };
@@ -707,6 +726,11 @@ public:
 };
 
 
+void f(Table& db)
+{
+    cout << db;
+}
+
 int main()
 {
     srand(time(0));
@@ -714,6 +738,8 @@ int main()
     int breakFlag = 0;
     Table db;
     db.read_csv("out", "Table");
+    vector< thread > tr_vec;
+    thread tmp_tr;
     while (1)
     {
         if (breakFlag)
@@ -740,7 +766,7 @@ int main()
         {
         case 0:{
             cout << db;
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
@@ -751,21 +777,21 @@ int main()
                 cout << "Успешно снято " << res << "\n";
             }
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 2:{
             db.makeDeposit();
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 3:{
             db.payOffCredit();
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
@@ -776,35 +802,44 @@ int main()
                 cout << "Взят кредит на " << res << "\n";
             }
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 5:{
             cout << "Введите название файла, в который будет произведена запись: ";
             cin >> filename;
-            db.write_csv(filename.c_str());
+            tmp_tr = thread([&db, &filename](){
+                db.write_csv(filename.c_str());
+            });
+            tr_vec.emplace_back(std::move(tmp_tr));
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 6:{
             db.changePercentage();
             getchar();
-            cout << "Нажмите любую кнопку для продолжения";
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 7:{
-            db.payDay();
-            cout << "Нажмите любую кнопку для продолжения";
+            tmp_tr = thread([&db](){
+                db.payDay();
+            });
+            tr_vec.emplace_back(std::move(tmp_tr));
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         }
         case 8:{
-            db.meanCreditDeposit();
-            cout << "Нажмите любую кнопку для продолжения";
+            tmp_tr = thread([&db](){
+                db.meanCreditDeposit();
+            });
+            tr_vec.emplace_back(std::move(tmp_tr));
+            cout << "Нажмите любую кнопку для продолжения\n";
             getchar();
             break;
         } 
@@ -821,6 +856,9 @@ int main()
         }
     }
 
-    
+    for(int i = 0; i < tr_vec.size(); i++)
+    {
+        tr_vec[i].join();
+    }
     return 0;
 }
